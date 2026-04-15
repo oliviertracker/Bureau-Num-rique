@@ -10,15 +10,16 @@
        .drawer-open { transform: translateY(0%); transition: transform 0.4s ease-out; }
        .drawer-closed { transform: translateY(100%); transition: transform 0.3s ease-in; }
        .text-dark { color: #000000 !important; }
-       input, textarea, select { color: #000000 !important; border: 2px solid #9ca3af !important; background-color: #ffffff !important; }
-       .note-card { background: white; border-left: 5px solid #4f46e5; border-radius: 12px; padding: 12px; margin-bottom: 10px; shadow: 0 2px 4px rgba(0,0,0,0.1); }
-       .tag { font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
+       input, textarea, select { color: #000000 !important; border: 2px solid #9ca3af !important; background-color: #ffffff !important; font-size: 16px !important; }
+       .note-card { background: white; border-left: 5px solid #4f46e5; border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+       .tag { font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; background: #e0e7ff; color: #4338ca; }
+       .tag-paye { background: #dcfce7; color: #166534; }
    </style>
 </head>
-<body class="bg-gray-100 min-h-screen p-4 font-sans">
+<body class="bg-gray-100 min-h-screen p-4 font-sans text-dark">
 
-   <header class="flex justify-between items-center mb-8">
-       <h1 class="text-2xl font-bold text-gray-800 italic">Mon Bureau</h1>
+   <header class="flex justify-between items-center mb-6">
+       <h1 class="text-2xl font-bold italic">Mon Bureau</h1>
        <div id="clock" class="text-lg font-mono font-bold text-blue-700">--:--</div>
    </header>
 
@@ -28,48 +29,61 @@
 
    <div id="drawerInterface" class="fixed bottom-0 left-0 right-0 h-[92vh] bg-gray-50 rounded-t-3xl shadow-2xl z-50 drawer-closed p-6 hidden overflow-y-auto">
        <div class="flex justify-between items-center mb-6">
-           <h2 id="drawerTitle" class="text-2xl font-bold text-dark uppercase">Tiroir</h2>
+           <h2 id="drawerTitle" class="text-2xl font-bold uppercase tracking-tighter">Tiroir</h2>
            <button onclick="closeDrawer()" class="text-4xl font-bold text-red-500">&times;</button>
        </div>
 
        <div class="space-y-4">
            <div id="calendarSection" class="hidden">
-               <label class="block mb-1 font-bold text-dark">Date :</label>
-               <input type="date" id="calDate" class="w-full p-4 rounded-xl font-bold text-xl mb-2" onchange="fetchNotes()">
+               <label class="block mb-1 font-bold">Date :</label>
+               <input type="date" id="calDate" class="w-full p-3 rounded-xl font-bold" onchange="fetchNotes()">
+           </div>
+
+           <div id="paieSection" class="hidden">
+               <label class="block mb-1 font-bold text-sm uppercase">Nom de l'employé :</label>
+               <input type="text" id="employeeName" class="w-full p-3 rounded-xl font-bold" placeholder="Ex: Jean Dupont">
            </div>
 
            <div id="categorySection" class="hidden">
-               <label class="block mb-1 font-bold text-dark text-sm">Type de facture :</label>
-               <select id="factureType" class="w-full p-4 rounded-xl font-bold text-lg mb-2">
+               <label class="block mb-1 font-bold text-sm uppercase">Type de dépense :</label>
+               <select id="factureType" class="w-full p-3 rounded-xl font-bold">
                    <option value="⚡ Électricité">Électricité</option>
                    <option value="💧 Eau">Eau</option>
                    <option value="📱 Téléphone">Téléphone / Internet</option>
                    <option value="🔥 Gaz">Gaz</option>
+                   <option value="🏠 Loyer">Loyer</option>
                    <option value="🛠️ Autre">Autre</option>
                </select>
            </div>
 
            <div class="relative">
-               <textarea id="noteArea" rows="3" class="w-full p-4 rounded-xl text-lg font-medium" placeholder="Détails (montant, commentaire)..."></textarea>
+               <textarea id="noteArea" rows="3" class="w-full p-4 rounded-xl text-lg font-medium" placeholder="Détails, commentaires..."></textarea>
                <button onclick="startDictation()" class="absolute right-3 bottom-3 bg-blue-600 text-white p-3 rounded-full shadow-lg">
-                   <i class="fas fa-microphone"></i>
+                   <i class="fas fa-microphone text-xl"></i>
                </button>
            </div>
 
-           <div class="grid grid-cols-2 gap-2">
-               <button onclick="document.getElementById('photoInput').click()" class="p-4 border-2 border-blue-400 rounded-xl bg-white flex items-center justify-center gap-2">
-                   <i class="fas fa-camera text-blue-600"></i> <span class="text-xs font-bold">PHOTO</span>
+           <div class="grid grid-cols-2 gap-3">
+               <button onclick="document.getElementById('photoInput').click()" class="p-4 border-2 border-blue-500 rounded-2xl bg-white flex flex-col items-center shadow-sm active:bg-blue-50">
+                   <i class="fas fa-camera text-2xl mb-1 text-blue-600"></i>
+                   <span class="text-[10px] font-black uppercase">Photo</span>
                    <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden">
                </button>
-               <button onclick="saveToFirebase()" class="bg-indigo-700 text-white p-4 rounded-xl font-bold shadow-lg">
-                   ENREGISTRER
+               <button onclick="document.getElementById('fileInput').click()" class="p-4 border-2 border-green-500 rounded-2xl bg-white flex flex-col items-center shadow-sm active:bg-green-50">
+                   <i class="fas fa-paperclip text-2xl mb-1 text-green-600"></i>
+                   <span class="text-[10px] font-black uppercase">Fichier</span>
+                   <input type="file" id="fileInput" class="hidden">
                </button>
            </div>
 
-           <hr class="border-gray-300">
+           <button onclick="saveToFirebase()" class="w-full bg-indigo-700 text-white py-5 rounded-2xl font-bold text-xl shadow-2xl active:bg-black">
+               ENREGISTRER
+           </button>
 
-           <h3 class="font-bold text-gray-700 uppercase text-xs tracking-widest">Archives du tiroir :</h3>
-           <div id="notesList" class="pb-20"></div>
+           <hr class="border-gray-300 my-4">
+
+           <h3 class="font-bold text-gray-700 uppercase text-xs tracking-widest mb-3">Contenu du tiroir :</h3>
+           <div id="notesList" class="pb-24"></div>
        </div>
    </div>
 
@@ -115,9 +129,9 @@
            document.getElementById('drawerTitle').innerText = name;
            document.getElementById('drawerInterface').classList.remove('hidden');
 
-           // Afficher les options selon le tiroir
            document.getElementById('calendarSection').classList.toggle('hidden', id !== 'calendar');
            document.getElementById('categorySection').classList.toggle('hidden', id !== 'factures');
+           document.getElementById('paieSection').classList.toggle('hidden', id !== 'paie');
 
            setTimeout(() => {
                document.getElementById('drawerInterface').classList.replace('drawer-closed', 'drawer-open');
@@ -131,12 +145,13 @@
            document.getElementById('overlay').classList.add('hidden');
            if(unsubscribe) unsubscribe();
            setTimeout(() => document.getElementById('drawerInterface').classList.add('hidden'), 300);
+           document.getElementById('noteArea').value = "";
+           document.getElementById('employeeName').value = "";
        };
 
        window.fetchNotes = () => {
            if(unsubscribe) unsubscribe();
            const dateID = currentTiroir === 'calendar' ? document.getElementById('calDate').value : "general";
-
            const q = query(collection(db, currentTiroir), where("dateID", "==", dateID), orderBy("timestamp", "desc"));
 
            unsubscribe = onSnapshot(q, (snapshot) => {
@@ -145,16 +160,18 @@
                snapshot.forEach((doc) => {
                    const data = doc.data();
                    const dateStr = data.timestamp?.toDate().toLocaleDateString('fr-FR') || "";
-                   const catTag = data.category ? `<span class="tag bg-gray-200 text-gray-700">${data.category}</span>` : "";
+                   let tagHtml = "";
+                   if(data.category) tagHtml = `<span class="tag">${data.category}</span>`;
+                   if(data.employee) tagHtml = `<span class="tag tag-paye"><i class="fas fa-user mr-1"></i>${data.employee}</span>`;
 
                    list.innerHTML += `
                        <div class="note-card">
-                           <div class="flex justify-between items-start mb-1">
-                               <span class="text-[10px] font-bold text-indigo-500">${dateStr}</span>
-                               <button onclick="deleteNote('${doc.id}')" class="text-red-300"><i class="fas fa-trash"></i></button>
+                           <div class="flex justify-between items-center mb-2">
+                               <span class="text-[10px] font-bold text-indigo-600">${dateStr}</span>
+                               <button onclick="deleteNote('${doc.id}')" class="text-red-400"><i class="fas fa-trash"></i></button>
                            </div>
-                           <div class="mb-2">${catTag}</div>
-                           <p class="text-dark font-medium">${data.note}</p>
+                           <div class="mb-2">${tagHtml}</div>
+                           <p class="font-medium">${data.note}</p>
                        </div>`;
                });
            });
@@ -164,32 +181,36 @@
            const noteText = document.getElementById('noteArea').value;
            const dateID = currentTiroir === 'calendar' ? document.getElementById('calDate').value : "general";
            const category = currentTiroir === 'factures' ? document.getElementById('factureType').value : "";
+           const employee = currentTiroir === 'paie' ? document.getElementById('employeeName').value : "";
 
-           if(!noteText) return alert("Écris quelque chose !");
+           if(!noteText && !employee) return alert("Remplissez au moins un champ !");
 
            try {
                await addDoc(collection(db, currentTiroir), {
-                   note: noteText,
+                   note: noteText || "Fiche de paie enregistrée",
                    dateID: dateID,
                    category: category,
+                   employee: employee,
                    timestamp: new Date()
                });
                document.getElementById('noteArea').value = "";
-           } catch (e) { console.error(e); }
+               if(currentTiroir !== 'paie') document.getElementById('employeeName').value = "";
+               alert("Document classé !");
+           } catch (e) { alert("Erreur de sauvegarde"); }
        };
 
        window.deleteNote = async (id) => {
-           if(confirm("Supprimer cette archive ?")) {
+           if(confirm("Supprimer cet élément ?")) {
                await deleteDoc(doc(db, currentTiroir, id));
            }
        };
 
        window.startDictation = () => {
-           const SpeechRecognition = window.SpeechRecognition || window.webkitRecognition;
+           const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
            if(!SpeechRecognition) return;
            const rec = new SpeechRecognition();
            rec.lang = 'fr-FR';
-           rec.onresult = (e) => { document.getElementById('noteArea').value += e.results[0][0].transcript; };
+           rec.onresult = (e) => { document.getElementById('noteArea').value += " " + e.results[0][0].transcript; };
            rec.start();
        };
 
