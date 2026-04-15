@@ -1,1 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+   <title>Mon Bureau Numérique</title>
+   <script src="https://cdn.tailwindcss.com"></script>
+   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+   <style>
+       .drawer-open { transform: translateY(0%); transition: transform 0.4s ease-out; }
+       .drawer-closed { transform: translateY(100%); transition: transform 0.3s ease-in; }
+       .text-dark { color: #000000 !important; }
+       input, textarea { color: #000000 !important; border: 2px solid #9ca3af !important; background-color: #ffffff !important; }
+       body { background-color: #f3f4f6; }
+   </style>
+</head>
+<body class="min-h-screen p-4 font-sans">
 
+   <header class="flex justify-between items-center mb-8">
+       <h1 class="text-2xl font-bold text-gray-800 italic">Mon Bureau</h1>
+       <div id="clock" class="text-lg font-mono font-bold text-blue-700">--:--</div>
+   </header>
+
+   <main class="grid grid-cols-2 gap-4" id="drawerGrid"></main>
+
+   <div id="overlay" class="fixed inset-0 bg-black/60 hidden z-40" onclick="closeDrawer()"></div>
+   <div id="drawerInterface" class="fixed bottom-0 left-0 right-0 h-[92vh] bg-white rounded-t-3xl shadow-2xl z-50 drawer-closed p-6 hidden">
+       <div class="flex justify-between items-center mb-6">
+           <h2 id="drawerTitle" class="text-2xl font-bold text-dark uppercase tracking-tight">Tiroir</h2>
+           <button onclick="closeDrawer()" class="text-4xl font-bold text-red-500">&times;</button>
+       </div>
+
+       <div class="space-y-6">
+           <div id="calendarSection" class="hidden bg-blue-50 p-4 rounded-xl">
+               <label class="block mb-2 font-bold text-dark">Sélectionner une date :</label>
+               <input type="date" id="calDate" class="w-full p-4 rounded-xl font-bold text-xl" onchange="fetchNoteFromFirebase()">
+           </div>
+
+           <div class="relative">
+               <label class="block mb-2 font-bold text-dark text-lg">Note / Détails :</label>
+               <textarea id="noteArea" rows="5" class="w-full p-4 rounded-xl text-lg font-medium shadow-inner" placeholder="Dictez ou écrivez ici..."></textarea>
+               <button onclick="startDictation()" class="absolute right-3 bottom-3 bg-blue-600 text-white p-4 rounded-full shadow-lg active:scale-90">
+                   <i class="fas fa-microphone text-xl"></i>
+               </button>
+           </div>
+
+           <div class="grid grid-cols-2 gap-4">
+               <button onclick="document.getElementById('photoInput').click()" class="flex flex-col items-center justify-center p-6 border-2 border-blue-500 rounded-2xl bg-white shadow-sm active:bg-blue-100">
+                   <i class="fas fa-camera text-3xl mb-2 text-blue-600"></i>
+                   <span class="text-xs font-black text-dark uppercase">Photo</span>
+                   <input type="file" id="photoInput" accept="image/*" capture="environment" class="hidden" onchange="alert('Photo prête ! Enregistrez pour envoyer.')">
+               </button>
+               <button onclick="document.getElementById('fileInput').click()" class="flex flex-col items-center justify-center p-6 border-2 border-green-500 rounded-2xl bg-white shadow-sm active:bg-green-100">
+                   <i class="fas fa-paperclip text-3xl mb-2 text-green-600"></i>
+                   <span class="text-xs font-black text-dark uppercase">Fichier</span>
+                   <input type="file" id="fileInput" class="hidden" onchange="alert('Fichier prêt ! Enregistrez pour envoyer.')">
+               </button>
+           </div>
+
+           <button onclick="saveToFirebase()" class="w-full bg-indigo-700 text-white py-5 rounded-2xl font-bold text-xl shadow-2xl active:bg-black">
+               <i class="fas fa-save mr-2"></i> ENREGISTRER MAINTENANT
+           </button>
+       </div>
+   </div>
+
+   <script type="module">
+       import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+       import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+
+       const firebaseConfig = {
+           apiKey: "AIzaSyCX874n5QeVk78YRkdhmN1ghv-r3ipIspE",
+           authDomain: "mon-bureau-numerique.firebaseapp.com",
+           projectId: "mon-bureau-numerique",
+           storageBucket: "mon-bureau-numerique.firebasestorage.app",
+           messagingSenderId: "1093006574917",
+           appId: "1:1093006574917:web:d4ea80cf3edba320602a2c",
+           measurementId: "G-B9LZDGTKNN"
+       };
+
+       const app = initializeApp(firebaseConfig);
+       const db = getFirestore(app);
+
+       let currentTiroir = "";
+       const tiroirs = [
+           { id: 'paie', name: 'Paie', color: 'bg-blue-500', icon: 'fa-id-card' },
+           { id: 'factures', name: 'Factures', color: 'bg-orange-500', icon: 'fa-file-invoice-dollar' },
+           { id: 'impots', name: 'Impôts', color: 'bg-red-500', icon: 'fa-landmark' },
+           { id: 'urssaf', name: 'URSSAF', color: 'bg-purple-500', icon: 'fa-building-columns' },
+           { id: 'tva', name: 'TVA', color: 'bg-green-600', icon: 'fa-percentage' },
+           { id: 'notes', name: 'Bloc-notes', color: 'bg-yellow-500', icon: 'fa-pen-to-square' },
+           { id: 'calendar', name: 'Calendrier', color: 'bg-indigo-600', icon: 'fa-calendar-days' }
+       ];
+
+       const grid = document.getElementById('drawerGrid');
+       tiroirs.forEach(t => {
+           const btn = document.createElement('button');
+           btn.className = `${t.color} text-white p-6 rounded-3xl shadow-lg flex flex-col items-center justify-center space-y-3 active:scale-95 transition-all`;
+           btn.innerHTML = `<i class="fas ${t.icon} text-3xl"></i><span class="font-bold text-sm uppercase">${t.name}</span>`;
+           btn.onclick = () => openDrawer(t.id, t.name);
+           grid.appendChild(btn);
+       });
+
+       window.openDrawer = (id, name) => {
+           currentTiroir = id;
+           document.getElementById('drawerTitle').innerText = name;
+           document.getElementById('drawerInterface').classList.remove('hidden');
+           setTimeout(() => {
+               document.getElementById('drawerInterface').classList.replace('drawer-closed', 'drawer-open');
+               document.getElementById('overlay').classList.remove('hidden');
+               if(id !== 'calendar') fetchNoteFromFirebase(); // Charger auto si c'est pas le calendrier
+           }, 10);
+           document.getElementById('calendarSection').classList.toggle('hidden', id !== 'calendar');
+       };
+
+       window.closeDrawer = () => {
+           document.getElementById('drawerInterface').classList.replace('drawer-open', 'drawer-closed');
+           document.getElementById('overlay').classList.add('hidden');
+           setTimeout(() => document.getElementById('drawerInterface').classList.add('hidden'), 300);
+           document.getElementById('noteArea').value = "";
+       };
+
+       // --- FONCTION LECTURE (RETROUVER LES NOTES) ---
+       window.fetchNoteFromFirebase = async () => {
+           const dateID = currentTiroir === 'calendar' ? document.getElementById('calDate').value : "general";
+           if (!dateID) { document.getElementById('noteArea').value = ""; return; }
+
+           const docSnap = await getDoc(doc(db, currentTiroir, `doc_${dateID}`));
+           if (docSnap.exists()) {
+               document.getElementById('noteArea').value = docSnap.data().note;
+           } else {
+               document.getElementById('noteArea').value = "";
+           }
+       };
+
+       // --- SAUVEGARDE ---
+       window.saveToFirebase = async () => {
+           const noteText = document.getElementById('noteArea').value;
+           const dateID = currentTiroir === 'calendar' ? document.getElementById('calDate').value : "general";
+
+           if(!dateID && currentTiroir === 'calendar') return alert("Choisis une date !");
+
+           try {
+               await setDoc(doc(db, currentTiroir, `doc_${dateID}`), {
+                   note: noteText,
+                   timestamp: new Date()
+               });
+               alert("Bien rangé !");
+           } catch (e) { console.error(e); }
+       };
+
+       window.startDictation = () => {
+           const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+           if (!SpeechRecognition) return alert("Micro non supporté.");
+           const rec = new SpeechRecognition();
+           rec.lang = 'fr-FR';
+           rec.start();
+           rec.onresult = (e) => { document.getElementById('noteArea').value += " " + e.results[0][0].transcript; };
+       };
+
+       setInterval(() => {
+           document.getElementById('clock').innerText = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+       }, 1000);
+   </script>
+</body>
+</html>
